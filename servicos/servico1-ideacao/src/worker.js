@@ -40,6 +40,10 @@ async function processarIdeacao(job) {
   for (let tentativa = 1; tentativa <= MAX_RETRIES_JSON; tentativa++) {
     try {
       dados = await gemini.chamarGemini(promptCompleto);
+      // Mapeia caso o Gemini tenha retornado roteiro_narracao (novo schema) ou roteiro (antigo)
+      if (dados.roteiro_narracao && !dados.roteiro) {
+        dados.roteiro = dados.roteiro_narracao;
+      }
       validarEstrutura(dados);
       break;
     } catch (err) {

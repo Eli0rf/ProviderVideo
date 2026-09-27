@@ -3,49 +3,77 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const SCHEMA_INSTRUCAO = `
-Você DEVE responder EXCLUSIVAMENTE com um JSON válido, sem markdown, sem comentários, sem texto extra.
+Você DEVE responder EXCLUSIVAMENTE com um JSON válido, sem blocos de código markdown (\`\`\`json), sem comentários e sem texto adicional.
 O JSON deve seguir EXATAMENTE esta estrutura:
 {
-  "tema": "string — tema/assunto do vídeo",
-  "titulo": "string — título chamativo para YouTube/TikTok",
-  "roteiro": "string — roteiro narrado completo (entre 50 e 100 palavras para ficar entre 20s e 40s a 2.5 palavras/segundo)",
-  "prompt_imagens": ["string — prompt descritivo para gerar cada imagem/cena do vídeo"],
-  "humor_trilha": "string — humor/mood da trilha sonora (ex: épico, misterioso, alegre, tenso)",
-  "hashtags": "string — hashtags separadas por espaço",
+  "tema": "string — tema/assunto principal do vídeo",
+  "titulo": "string — título chamativo e altamente clicável",
+  "roteiro": "string — roteiro narrado completo, gancho forte nos primeiros 3s (50 a 100 palavras para 20-40s a 2.5 palavras/s)",
+  "humor_trilha": "string — humor/mood da trilha sonora",
+  "prompt_imagens": [
+    "string — prompt cena 1, exigindo obrigatoriamente estilo fotorrealista cinematográfico (Hyper-realistic 8k, cinematic dramatic lighting, National Geographic style, photorealistic)",
+    "string — prompt cena 2 com padrão fotorrealista",
+    "string — prompt cena 3 com padrão fotorrealista"
+  ],
   "variacoes_teste_ab": {
-    "titulo_a": "string — variação A do título",
-    "titulo_b": "string — variação B do título",
-    "thumb_prompt_a": "string — prompt de thumbnail variação A",
-    "thumb_prompt_b": "string — prompt de thumbnail variação B"
-  }
+    "titulo_a": "string — variação A",
+    "titulo_b": "string — variação B",
+    "thumb_prompt_a": "string — prompt fotorrealista thumbnail A",
+    "thumb_prompt_b": "string — prompt fotorrealista thumbnail B"
+  },
+  "hashtags": "string — hashtags separadas por espaço"
 }`;
 
 /**
- * Monta o prompt completo com contexto do canal e inteligência.
+ * Monta o prompt especializado por pilar (História/Ciência, Visual Cinematográfico, Promoção/Monetização) e inteligência.
  */
-function montarPrompt(canal, inteligencia, template, promptOverride) {
-  let contexto = `Você é um roteirista especialista em vídeos curtos virais para o nicho "${canal.nicho}".\n`;
+function montarPrompt(canal, inteligencia, template, promptOverride, subcategoria = 'GERAL') {
+  let pilarInstrucao = '';
+  const sub = (subcategoria || canal.nicho || 'GERAL').toUpperCase();
+
+  if (sub.includes('HISTORIA') || sub.includes('HISTÓRIA') || sub.includes('CIENCIA') || sub.includes('CIÊNCIA')) {
+    pilarInstrucao = `
+[PILAR 1: CURIOSIDADES CIENTÍFICAS E HISTÓRICAS DE ALTA RETENÇÃO]
+- Foco em revelações surpreendentes, fatos desconhecidos ou paradoxos históricos/científicos.
+- O gancho inicial (0-3 segundos) deve quebrar um mito ou lançar uma pergunta perturbadora.
+- Ritmo dinâmico, mantendo alta retenção segundo a segundo.`;
+  } else if (sub.includes('PROMO') || sub.includes('MONETIZACAO') || sub.includes('PRODUTO')) {
+    pilarInstrucao = `
+[PILAR 3: PROMOÇÃO DE PRODUTOS E MONETIZAÇÃO]
+- Foco em conversão, resolução imediata de uma dor urgente do cliente.
+- Gancho com apelo de transformação rápida ou benefício inegável.
+- CTA magnética no final do roteiro.`;
+  } else {
+    pilarInstrucao = `
+[PILAR 2: VISUAL FOTORREALISTA E CINEMATOGRÁFICO]
+- Foco em imersão visual profunda, narrativa instigante e estética cinematográfica de altíssimo nível.`;
+  }
+
+  let contexto = `Você é um roteirista sênior especialista em vídeos curtos virais (TikTok, Reels, Shorts) para o canal "${canal.nome}" (${canal.nicho}).\n`;
+  contexto += pilarInstrucao;
 
   if (inteligencia) {
     if (inteligencia.melhor_estilo_gancho) {
-      contexto += `\nUse esses padrões de sucesso como referência de gancho: ${inteligencia.melhor_estilo_gancho}`;
+      contexto += `\nPadrões de gancho de sucesso comprovados pelo canal: ${inteligencia.melhor_estilo_gancho}`;
     }
     if (inteligencia.temas_saturados) {
       const saturados = typeof inteligencia.temas_saturados === 'string'
         ? inteligencia.temas_saturados
         : JSON.stringify(inteligencia.temas_saturados);
-      contexto += `\nEvite estes temas saturados: ${saturados}`;
+      contexto += `\nEVITE absolutamente estes temas já saturados: ${saturados}`;
     }
   }
 
   if (template && template.prompt_base) {
-    contexto += `\n\nEstilo de vídeo solicitado: "${template.nome_estilo}"\nInstruções do template: ${template.prompt_base}`;
+    contexto += `\nEstilo/Template do vídeo: ${template.prompt_base}`;
   }
 
+  contexto += `\n\nREQUISITO VISUAL OBRIGATÓRIO (PADRÃO FOTORREALISTA): Todos os prompts em 'prompt_imagens', 'thumb_prompt_a' e 'thumb_prompt_b' DEVEM ser descrições detalhadas exigindo alta qualidade fotorrealista e cinematográfica, utilizando obrigatoriamente termos como: "Hyper-realistic 8k, cinematic dramatic lighting, National Geographic style, photorealistic, ultra-detailed". NUNCA use estilos cartoon, infantis ou desenhos genéricos.`;
+
   if (promptOverride) {
-    contexto += `\n\nInstrução direta do usuário (prioridade máxima): ${promptOverride}`;
+    contexto += `\n\nTema ou diretriz específica fornecida: "${promptOverride}"`;
   } else {
-    contexto += `\n\nCrie um tema original e viral para o canal "${canal.nome}" no nicho "${canal.nicho}".`;
+    contexto += `\n\nCrie um tema inédito, viral e altamente magnético dentro do nicho do canal.`;
   }
 
   contexto += `\n\n${SCHEMA_INSTRUCAO}`;
@@ -69,7 +97,7 @@ ${SCHEMA_INSTRUCAO}`;
  * Chama Gemini e parseia JSON. Retry com exponential backoff em 429/500.
  */
 async function chamarGemini(prompt) {
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-3.8-flash' });
   const backoffDelays = [5000, 15000, 60000]; // 5s -> 15s -> 60s
 
   for (let tentativa = 0; tentativa <= backoffDelays.length; tentativa++) {
