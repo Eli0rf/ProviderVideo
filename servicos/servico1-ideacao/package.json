@@ -1,0 +1,17 @@
+{
+  "name": "servico1-ideacao",
+  "version": "1.0.0",
+  "description": "Serviço de Ideação - Gera roteiros via Gemini AI",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "bullmq": "^5.12.0",
+    "dotenv": "^16.4.5",
+    "ioredis": "^5.4.1",
+    "mysql2": "^3.11.0"
+  }
+}
