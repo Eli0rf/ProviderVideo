@@ -1,0 +1,31 @@
+========================================
+ Serviço 2 - Motor de Mídia (FFmpeg)
+========================================
+[Config] Redis: localhost:6379
+[Config] MySQL: localhost:3306/pipeline_videos
+[Config] Fila: midia (concurrency: 1)
+[Config] Output: ./output
+
+[Boot] Encontrados 1 vídeos pendentes (GERANDO_MIDIA)
+[Boot] Enfileirado vídeo id=3
+[Worker] Aguardando jobs na fila...
+[Worker] Processando mídia para vídeo id=3
+[Worker] Etapa 1/3: Gerando áudio TTS (Voz Real)...
+[Áudio] Gerando áudio via TTS (OpenAI): 517 caracteres
+[Áudio] ⚠️ OPENAI_API_KEY não encontrada. Usando TTS Mock.
+[Worker] Etapa 2/3: Baixando imagens realistas...
+[Imagens] Baixando cena1 (prompt: "Hyper-realistic 8k, cinematic dramatic lighting, N...")
+[Imagens] ✅ Salvo: /Users/Elio/FicarRicoEsseAno/servicos/servico2-midia/tmp/video_3/cena1.jpg
+[Imagens] Baixando cena2 (prompt: "Hyper-realistic 8k, cinematic dramatic lighting, N...")
+[Imagens] ✅ Salvo: /Users/Elio/FicarRicoEsseAno/servicos/servico2-midia/tmp/video_3/cena2.jpg
+[Imagens] Baixando cena3 (prompt: "Hyper-realistic 8k, cinematic dramatic lighting, N...")
+[Imagens] ✅ Salvo: /Users/Elio/FicarRicoEsseAno/servicos/servico2-midia/tmp/video_3/cena3.jpg
+[Worker] Etapa 3/3: Renderizando vídeo + Legendas...
+[FFmpeg] Renderizando: 3 imagens x 10.33s = 31s
+[FFmpeg] Comando iniciado
+
+[FFmpeg] ✅ Renderização concluída
+[Worker] ✅ Vídeo finalizado. Status -> AGUARDANDO_APROVACAO_VIDEO
+[Worker] 🗑️ Iniciando Garbage Collection na pasta: /Users/Elio/FicarRicoEsseAno/servicos/servico2-midia/tmp/video_3
+[Worker] 🧹 Garbage Collection: removida pasta inteira e ficheiros temporários em /Users/Elio/FicarRicoEsseAno/servicos/servico2-midia/tmp/video_3
+[Fila] ✅ Job midia-3 concluído: undefined
