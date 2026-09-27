@@ -81,7 +81,9 @@ function renderizarVideo(imagePaths, audioPath, outputPath, duracaoTotal, roteir
       concatInputs.push(`[v${i}]`);
     }
 
-    let filterComplex = filterParts.join('; ') + `; ${concatInputs.join('')}concat=n=${numImagens}:v=1:a=0[outv]`;
+    const srtPath = gerarLegendasSrt(roteiro, duracaoTotal, outputPath);
+
+    let filterComplex = filterParts.join('; ') + `; ${concatInputs.join('')}concat=n=${numImagens}:v=1:a=0[outv]; [outv]subtitles='${srtPath}':force_style='Fontname=Arial,FontSize=24,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Alignment=2'[finalv]`;
 
     let command = ffmpeg();
     for (const img of inputs) {
@@ -89,18 +91,10 @@ function renderizarVideo(imagePaths, audioPath, outputPath, duracaoTotal, roteir
     }
     command = command.input(audioPath);
 
-    // Usa drawtext dinâmico (substituto pro modulo "subtitles" que depende do binário do SO compilado com libass)
-    // O texto fica centralizado e grande na tela. Pra facilitar vamos aplicar no command final.
-    
-    // Gerar SRT dinâmico para usar c/ drawtext ou subtitles (se libass existir, drawtext como fallback)
-    // Para simplificar garantindo compatibilidade multiplataforma, vamos tentar gravar um drawtext simples 
-    // ou depender de um ffmpeg completo (usaremos fallback pro ffmpeg nativo sem filtro se não suportar).
-    const srtPath = gerarLegendasSrt(roteiro, duracaoTotal, outputPath);
-
     command
       .complexFilter(filterComplex)
       .outputOptions([
-        '-map', '[outv]',
+        '-map', '[finalv]',
         '-map', `${numImagens}:a`,
         '-c:v', 'libx264',
         '-preset', 'fast',
@@ -109,8 +103,6 @@ function renderizarVideo(imagePaths, audioPath, outputPath, duracaoTotal, roteir
         '-b:a', '128k',
         '-shortest',
         '-pix_fmt', 'yuv420p',
-        // Adiciona legenda vertical centralizada se o SO suportar libass
-        `-vf`, `subtitles='${srtPath}':force_style='Fontname=Arial,FontSize=24,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Alignment=2'`, 
         '-movflags', '+faststart',
       ])
       .output(outputPath)
